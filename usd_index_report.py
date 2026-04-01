@@ -17,12 +17,13 @@ SMTP_PORT = 587
 
 def fetch_usd_index():
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             ["curl", "-s", "--max-time", "15", "https://api.exchangerate-api.com/v4/latest/USD"],
-            capture_output=True, text=True, timeout=20
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
-        if result.returncode == 0 and result.stdout:
-            data = json.loads(result.stdout)
+        stdout, stderr = process.communicate()
+        if process.returncode == 0 and stdout:
+            data = json.loads(stdout)
             rates = data.get("rates", {})
             
             eur = rates.get("EUR", 0)
@@ -74,12 +75,13 @@ def fetch_usd_index():
 
 def fetch_gold_price():
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             ["curl", "-s", "--max-time", "15", "https://qt.gtimg.cn/q=hf_XAU,hf_XAG"],
-            capture_output=True, text=True, timeout=20
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
-        if result.returncode == 0 and result.stdout:
-            data = result.stdout
+        stdout, stderr = process.communicate()
+        if process.returncode == 0 and stdout:
+            data = stdout
             results = []
             
             for line in data.split("\n"):
