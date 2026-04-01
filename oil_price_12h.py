@@ -21,32 +21,75 @@ def fetch_oil_prices():
         data = response.text
         
         for line in data.split("\n"):
-            parts = line.split("~")
-            if len(parts) > 32:
-                code = parts[0].split("_")[1] if "_" in parts[0] else ""
-                if code == "CL":
-                    price = parts[3]
-                    change_pct = parts[32] if len(parts) > 32 else "0"
-                    if price and price not in ["0", ""]:
-                        prices["WTI纽约原油"] = {"price": f"${price}/桶", "change": change_pct}
-                elif code == "LCO":
-                    price = parts[3]
-                    change_pct = parts[32] if len(parts) > 32 else "0"
-                    if price and price not in ["0", ""]:
-                        prices["布伦特原油"] = {"price": f"${price}/桶", "change": change_pct}
+            if not line.strip() or "=" not in line:
+                continue
+                
+            code_part, value_part = line.split("=", 1)
+            if not value_part or '"' not in value_part:
+                continue
+                
+            values = value_part.strip('";').split(",")
+            if len(values) < 2:
+                continue
+            
+            price = values[0].strip()
+            change = values[1].strip()
+            
+            if "hf_CL" in line and price and price not in ["0", ""]:
+                prices["WTI纽约原油"] = {"price": f"${price}/桶", "change": change}
+            elif "hf_LCO" in line and price and price not in ["0", ""]:
+                prices["布伦特原油"] = {"price": f"${price}/桶", "change": change}
+            elif "hf_XAU" in line and price and price not in ["0", ""]:
+                prices["现货黄金"] = {"price": f"${price}/盎司", "change": change}
     except Exception as e:
         print(f"获取国际油价失败: {e}")
     
     try:
-        response = requests.get("https://hq.sinajs.cn/list=nf_0#SC", headers={"Referer": "https://finance.sina.com.cn", "User-Agent": "Mozilla/5.0"}, timeout=15)
-        response.encoding = "utf-8"
+        response = requests.get("https://hq.sinajs.cn/list=nf_SC0", headers={"Referer": "https://finance.sina.com.cn", "User-Agent": "Mozilla/5.0"}, timeout=15)
+        response.encoding = "gbk"
         data = response.text
-        if "nf_0" in data and "=" in data:
-            parts = data.split("=")[1].split(",")
-            if len(parts) > 4 and parts[1].strip():
-                prices["SC上海原油"] = {"price": f"¥{parts[1].strip()}/桶", "change": parts[2].strip() if len(parts) > 2 else "0"}
+        if "nf_SC0" in data and "=" in data:
+            values = data.split("=")[1].strip('";').split(",")
+            if len(values) > 9:
+                price = values[2].strip()  # 最新价
+                prev_close = values[5].strip() if len(values) > 5 else price  # 昨结算价
+                if price and price not in ["0", ""]:
+                    try:
+                        price_float = float(price)
+                        prev_float = float(prev_close)
+                        if prev_float != 0:
+                            change_pct = ((price_float - prev_float) / prev_float * 100)
+                            change_str = f"{change_pct:.2f}"
+                        else:
+                            change_str = "0"
+                    except:
+                        change_str = "0"
+                    prices["SC上海原油"] = {"price": f"¥{price}/桶", "change": change_str}
     except Exception as e:
         print(f"获取国内油价失败: {e}")
+    
+    # 尝试获取迪拜现货油价
+    dubai_found = False
+    dubai_codes = ["hf_DUBAI", "hf_OMAN", "hf_DU", "hf_DB", "hf_MID"]
+    for code in dubai_codes:
+        try:
+            response = requests.get(f"https://qt.gtimg.cn/q={code}", headers={"Referer": "https://finance.qq.com", "User-Agent": "Mozilla/5.0"}, timeout=10)
+            response.encoding = "gbk"
+            data = response.text
+            if '="' in data and "none_match" not in data:
+                values = data.split('="')[1].strip('";').split(",")
+                if len(values) >= 2:
+                    price = values[0].strip()
+                    change = values[1].strip()
+                    if price and price not in ["0", ""]:
+                        prices["迪拜现货原油"] = {"price": f"${price}/桶", "change": change}
+                        dubai_found = True
+                        break
+        except:
+            continue
+    
+    if not dubai_found:
+        prices["迪拜现货原油"] = {"price": "数据获取中", "change": "0"}
     
     return prices
 
@@ -60,6 +103,11 @@ def get_oil_text_description(prices):
         if isinstance(data, dict):
             price = data.get("price", "N/A")
             change = data.get("change", "0")
+            
+            if price == "数据获取中":
+                descriptions.append(f"{name}: {price}")
+                continue
+                
             try:
                 change_float = float(change)
                 if change_float > 0:
