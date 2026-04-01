@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import requests
 import smtplib
 import subprocess
@@ -33,9 +34,9 @@ def fetch_usd_index():
             
             if eur > 0 and jpy > 0:
                 usdx = 50.14348112 * (eur ** -0.576) * (jpy ** 0.136) * (gbp ** -0.119) * (cad ** 0.091) * (sek ** 0.042) * (chf ** 0.036)
-                return f"{usdx:.2f} (基于主要货币汇率计算)"
+                return "{:.2f} (基于主要货币汇率计算)".format(usdx)
     except Exception as e:
-        print(f"Exchangerate API failed: {e}")
+        print("Exchangerate API failed: {}".format(e))
     
     try:
         r = requests.get("https://stooq.com/q/d/l/?s=dxy", timeout=15)
@@ -51,9 +52,9 @@ def fetch_usd_index():
                 current = float(last_line[close_idx])
                 prev = float(prev_line[close_idx])
                 pct = (current - prev) / prev * 100
-                return f"{current:.2f} (涨跌: {pct:.2f}%)"
+                return "{:.2f} (涨跌: {:.2f}%)".format(current, pct)
     except Exception as e:
-        print(f"Stooq DXY failed: {e}")
+        print("Stooq DXY failed: {}".format(e))
     
     try:
         response = requests.get("https://qt.gtimg.cn/q=USINDEX", headers={"Referer": "https://finance.qq.com", "User-Agent": "Mozilla/5.0"}, timeout=15)
@@ -65,9 +66,9 @@ def fetch_usd_index():
             price = parts[3]
             change_pct = parts[32] if len(parts) > 32 else "0"
             if price and price not in ["0", ""]:
-                return f"{price} (涨跌: {change_pct}%)"
+                return "{} (涨跌: {}%)".format(price, change_pct)
     except Exception as e:
-        print(f"获取美元指数失败: {e}")
+        print("获取美元指数失败: {}".format(e))
     
     return "数据获取中，请查看 https://finance.sina.com.cn/forex/"
 
@@ -82,7 +83,7 @@ def fetch_gold_price():
             results = []
             
             for line in data.split("\n"):
-                if '=",' not in line:
+                if '="' not in line:
                     continue
                 parts = line.split('="')[1].rstrip('";').split(",")
                 if len(parts) >= 2:
@@ -90,28 +91,19 @@ def fetch_gold_price():
                         price = parts[0]
                         change = parts[1]
                         if price and price not in ["0", ""]:
-                            results.append(f"现货黄金: ${price}/盎司 (涨跌: {change}%)")
+                            results.append("现货黄金: ${}/盎司 (涨跌: {}%)".format(price, change))
                     elif "hf_XAG" in line:
                         price = parts[0]
                         change = parts[1]
                         if price and price not in ["0", ""]:
-                            results.append(f"现货白银: ${price}/盎司 (涨跌: {change}%)")
+                            results.append("现货白银: ${}/盎司 (涨跌: {}%)".format(price, change))
             
             if results:
                 return "\n".join(results)
     except Exception as e:
-        print(f"获取贵金属价格失败: {e}")
+        print("获取贵金属价格失败: {}".format(e))
     
-    try:
-        response = requests.get("https://hq.sinajs.cn/list=nf_XAU,nf_XAG", headers={"Referer": "https://finance.sina.com.cn", "User-Agent": "Mozilla/5.0"}, timeout=15)
-        response.encoding = "utf-8"
-        data = response.text
-        if "nf_XAU" in data:
-            parts = data.split("=")[1].split(",")
-            if len(parts) > 4 and parts[1].strip():
-                return f"现货黄金: ${parts[1].strip()}/盎司"
-    except:
-        pass
+    # 新浪API返回空数据，已移除无效调用
     
     return "数据获取中，请查看 https://finance.sina.com.cn/money/metal/"
 
@@ -120,17 +112,17 @@ def send_usd_report():
     usd = fetch_usd_index()
     gold = fetch_gold_price()
     
-    subject = f"美元指数简报 - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    subject = "美元指数简报 - {}".format(datetime.now().strftime('%Y-%m-%d %H:%M'))
     
-    body = f"""美元指数与黄金实时报告
-{'='*55}
-{datetime.now().strftime('%Y-%m-%d %H:%M')}
+    body = """美元指数与黄金实时报告
+{}
+{}
 
 【美元指数】
-{usd}
+{}
 
 【贵金属价格】
-{gold}
+{}
 
 【美元指数走势分析】
 美元指数反映美元相对于一篮子主要货币的强弱变化
@@ -157,8 +149,8 @@ def send_usd_report():
 - 华尔街见闻: https://wallstreetcn.com/
 - 金十数据: https://www.jin10.com/
 
-{'='*55}
-"""
+{}
+""".format('='*55, datetime.now().strftime('%Y-%m-%d %H:%M'), usd, gold, '='*55)
     
     msg = MIMEMultipart()
     msg["From"] = SENDER_EMAIL
