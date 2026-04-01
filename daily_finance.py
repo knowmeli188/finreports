@@ -28,12 +28,13 @@ STOCKS = {
 
 def curl_get(url):
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             ["curl", "-s", "--max-time", "15", "-H", "Referer: https://finance.qq.com", url],
-            capture_output=True, text=True, timeout=20
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
-        if result.returncode == 0 and result.stdout:
-            return result.stdout
+        stdout, stderr = process.communicate()
+        if process.returncode == 0 and stdout:
+            return stdout
     except:
         pass
     return None
@@ -51,13 +52,13 @@ def fetch_global_markets():
                 price = parts[0].strip()
                 change = parts[1].strip()
                 if "hf_XAU" in line and price and price not in ["0", ""]:
-                    markets["现货黄金"] = f"${price}/盎司 ({change}%)"
+                    markets["现货黄金"] = "${}/盎司 ({}%)".format(price, change)
                 elif "hf_XAG" in line and price and price not in ["0", ""]:
-                    markets["现货白银"] = f"${price}/盎司 ({change}%)"
+                    markets["现货白银"] = "${}/盎司 ({}%)".format(price, change)
                 elif "hf_CL" in line and price and price not in ["0", ""]:
-                    markets["WTI原油"] = f"${price}/桶 ({change}%)"
+                    markets["WTI原油"] = "${}/桶 ({}%)".format(price, change)
                 elif "hf_LCO" in line and price and price not in ["0", ""]:
-                    markets["布伦特原油"] = f"${price}/桶 ({change}%)"
+                    markets["布伦特原油"] = "${}/桶 ({}%)".format(price, change)
     
     if "布伦特原油" not in markets:
         text = curl_get("https://qt.gtimg.cn/q=hf_OIL")

@@ -19,13 +19,14 @@ def fetch_oil_prices():
     prices = []
     
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             ["curl", "-s", "--max-time", "15", "https://qt.gtimg.cn/q=hf_CL,hf_LCO,hf_XAU"],
-            capture_output=True, text=True, timeout=20
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
-        if result.returncode == 0 and result.stdout:
-            data = result.stdout
-            print(f"Raw data: {data[:200]}")
+        stdout, stderr = process.communicate()
+        if process.returncode == 0 and stdout:
+            data = stdout
+            print("Raw data: {}".format(data[:200]))
             for line in data.split("\n"):
                 if '="' not in line:
                     continue

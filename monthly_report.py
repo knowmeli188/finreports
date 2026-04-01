@@ -21,12 +21,13 @@ DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "sk-f2b0c2b771fe4ba1b08532
 
 def curl_get(url):
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             ["curl", "-s", "--max-time", "15", url],
-            capture_output=True, text=True, timeout=20
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
-        if result.returncode == 0 and result.stdout:
-            return result.stdout
+        stdout, stderr = process.communicate()
+        if process.returncode == 0 and stdout:
+            return stdout
     except:
         pass
     return None
