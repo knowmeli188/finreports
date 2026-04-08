@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import requests
 from bs4 import BeautifulSoup
 import smtplib
@@ -32,20 +33,20 @@ def fetch_china_market():
             if len(parts) > 5:
                 code = parts[0]
                 price = parts[3]
-                change = parts[31] if len(parts) > 31 else parts[32] if len(parts) > 32 else "0"
+                change = parts[5] if len(parts) > 5 else "0"
                 
                 if "sh000001" in code and price and price not in ["0", ""]:
-                    markets["上证指数"] = f"{price} ({change}%)"
+                    markets["上证指数"] = "{} ({}%)".format(price, change)
                 elif "sz399001" in code and price and price not in ["0", ""]:
-                    markets["深证成指"] = f"{price} ({change}%)"
+                    markets["深证成指"] = "{} ({}%)".format(price, change)
                 elif "usDJI" in code and price and price not in ["0", ""]:
-                    markets["道琼斯"] = f"{price} ({change}%)"
+                    markets["道琼斯"] = "{} ({}%)".format(price, change)
                 elif "usIXIC" in code and price and price not in ["0", ""]:
-                    markets["纳斯达克"] = f"{price} ({change}%)"
+                    markets["纳斯达克"] = "{} ({}%)".format(price, change)
                 elif "usINX" in code and price and price not in ["0", ""]:
-                    markets["标普500"] = f"{price} ({change}%)"
+                    markets["标普500"] = "{} ({}%)".format(price, change)
     except Exception as e:
-        print(f"腾讯财经数据获取失败: {e}")
+        print("腾讯财经数据获取失败: {}".format(e))
     
     if not markets:
         try:
@@ -54,11 +55,11 @@ def fetch_china_market():
             if "sh000001" in data:
                 parts = data.split("sh000001")[1].split("=")[1].split(",")
                 if len(parts) > 2:
-                    markets["上证指数"] = f"{parts[1]} ({parts[2]}%)"
+                    markets["上证指数"] = "{} ({}%)".format(parts[1], parts[2])
             if "sz399001" in data:
                 parts = data.split("sz399001")[1].split("=")[1].split(",")
                 if len(parts) > 2:
-                    markets["深证成指"] = f"{parts[1]} ({parts[2]}%)"
+                    markets["深证成指"] = "{} ({}%)".format(parts[1], parts[2])
         except:
             pass
     
@@ -79,14 +80,14 @@ def fetch_oil_price():
             if len(parts) > 5:
                 code = parts[0].split("_")[1] if "_" in parts[0] else ""
                 price = parts[3]
-                change = parts[31] if len(parts) > 31 else "0"
+                change = parts[5] if len(parts) > 5 else "0"
                 
                 if code == "CL" and price and price not in ["0", ""]:
-                    return f"${price}/桶 ({change}%)"
+                    return "${}/桶 ({}%)".format(price, change)
                 elif code == "LCO" and price and price not in ["0", ""]:
-                    return f"${price}/桶 ({change}%)"
+                    return "${}/桶 ({}%)".format(price, change)
     except Exception as e:
-        print(f"获取油价失败: {e}")
+        print("获取油价失败: {}".format(e))
     
     try:
         response = requests.get("https://hq.sinajs.cn/list=nf_CL", headers={"Referer": "https://finance.sina.com.cn"}, timeout=10)
@@ -94,7 +95,7 @@ def fetch_oil_price():
         if "=" in data:
             parts = data.split("=")[1].split(",")
             if len(parts) > 2:
-                return f"${parts[1]}"
+                return "${}".format(parts[1])
     except:
         pass
     
@@ -113,11 +114,11 @@ def fetch_usd_index():
         parts = data.split("~")
         if len(parts) > 5:
             price = parts[3]
-            change = parts[31] if len(parts) > 31 else "0"
+            change = parts[5] if len(parts) > 5 else "0"
             if price and price not in ["0", ""]:
-                return f"{price} ({change}%)"
+                return "{} ({}%)".format(price, change)
     except Exception as e:
-        print(f"获取美元指数失败: {e}")
+        print("获取美元指数失败: {}".format(e))
     
     try:
         response = requests.get("https://hq.sinajs.cn/list=fx_usdindex", headers={"Referer": "https://finance.sina.com.cn"}, timeout=10)
@@ -149,7 +150,7 @@ def fetch_china_news():
             if title and href and "http" in href:
                 for kw in keywords:
                     if kw in title:
-                        news_items.append(f"• {title}\n  {href}")
+                        news_items.append("• {}\n  {}".format(title, href))
                         break
     except:
         pass
@@ -157,7 +158,7 @@ def fetch_china_news():
     return "\n\n".join(news_items[:15]) if news_items else "暂无相关新闻"
 
 def get_ai_analysis(markets, oil_price, usd_index, news):
-    prompt = f"""请作为资深A股市场分析师，为我生成一份全面的A股走势分析报告：
+    prompt = """请作为资深A股市场分析师，为我生成一份全面的A股走势分析报告：
 
 【A股主要指数】
 {markets}
@@ -207,13 +208,13 @@ WTI原油: {oil_price}
 - 重点关注板块
 - 风险提示
 
-请用专业详尽的中文进行分析。"""
+请用专业详尽的中文进行分析。""".format(markets=markets, oil_price=oil_price, usd_index=usd_index, news=news)
 
     try:
         url = "https://api.deepseek.com/v1/chat/completions"
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
+            "Authorization": "Bearer {}".format(DEEPSEEK_API_KEY)
         }
         
         data = {
@@ -230,9 +231,9 @@ WTI原油: {oil_price}
         if "choices" in result and len(result["choices"]) > 0:
             return result["choices"][0]["message"]["content"]
         else:
-            return f"AI分析生成失败: {result}"
+            return "AI分析生成失败: {}".format(result)
     except Exception as e:
-        return f"AI分析调用失败: {str(e)}"
+        return "AI分析调用失败: {}".format(str(e))
 
 def send_report():
     print("获取A股数据...")
@@ -241,16 +242,16 @@ def send_report():
     usd_index = fetch_usd_index()
     news = fetch_china_news()
     
-    market_text = "\n".join([f"{k}: {v}" for k, v in markets.items()])
+    market_text = "\n".join(["{}: {}".format(k, v) for k, v in markets.items()])
     
     print("生成AI分析...")
     ai_analysis = get_ai_analysis(markets, oil_price, usd_index, news)
     
-    subject = f"A股走势分析报告 - {datetime.now().strftime('%Y-%m-%d')}"
+    subject = "A股走势分析报告 - {}".format(datetime.now().strftime('%Y-%m-%d'))
     
-    body = f"""A股市场走势分析报告
-{'='*60}
-{datetime.now().strftime('%Y-%m-%d %H:%M')}
+    body = """A股市场走势分析报告
+{separator}
+{timestamp}
 
 【A股核心指数】
 {market_text}
@@ -263,17 +264,17 @@ WTI原油: {oil_price}（海湾局势影响）
 布伦特原油: 参考WTI
 美元指数: {usd_index}
 
-{'='*60}
+{separator}
 
 【AI深度分析】
 {ai_analysis}
 
-{'='*60}
+{separator}
 
 【国内财经新闻】
 {news}
 
-{'='*60}
+{separator}
 
 【行情图表链接】
 上证指数: https://finance.sina.com.cn/stock/
@@ -296,9 +297,18 @@ AI人工智能: https://finance.sina.com.cn/stock/
 同花顺: https://www.10jqka.com.cn/
 Wind: https://www.wind.com.cn/
 
-{'='*60}
-报告生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-"""
+{separator}
+报告生成时间: {end_time}
+""".format(
+        separator='='*60,
+        timestamp=datetime.now().strftime('%Y-%m-%d %H:%M'),
+        market_text=market_text,
+        oil_price=oil_price,
+        usd_index=usd_index,
+        ai_analysis=ai_analysis,
+        news=news,
+        end_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    )
     
     msg = MIMEMultipart()
     msg["From"] = SENDER_EMAIL
