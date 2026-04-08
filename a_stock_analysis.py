@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import requests
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup  # 暂时注释掉
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -133,29 +133,8 @@ def fetch_usd_index():
     return "数据获取中"
 
 def fetch_china_news():
-    url = "https://finance.sina.com.cn/stock/"
-    headers = {"User-Agent": "Mozilla/5.0"}
-    
-    news_items = []
-    keywords = ["A股", "股市", "沪指", "深指", "政策", "降息", "降准", "印花税", "IPO", "科创板", "创业板", "新能源", "AI", "芯片", "房地产"]
-    
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.encoding = "utf-8"
-        soup = BeautifulSoup(response.text, "html.parser")
-        
-        for item in soup.select("h2 a, .news-item a")[:30]:
-            title = item.get_text(strip=True)
-            href = item.get("href", "")
-            if title and href and "http" in href:
-                for kw in keywords:
-                    if kw in title:
-                        news_items.append("• {}\n  {}".format(title, href))
-                        break
-    except:
-        pass
-    
-    return "\n\n".join(news_items[:15]) if news_items else "暂无相关新闻"
+    # 暂时跳过新闻抓取，避免BeautifulSoup依赖
+    return "新闻抓取功能暂时禁用（需要BeautifulSoup）"
 
 def get_ai_analysis(markets, oil_price, usd_index, news):
     prompt = """请作为资深A股市场分析师，为我生成一份全面的A股走势分析报告：
