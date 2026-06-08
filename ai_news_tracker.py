@@ -408,13 +408,12 @@ def main():
     print("="*60)
 
     # 隔周二执行检查：用ISO周数判断奇偶数周
-    iso_week = datetime.now().isocalendar()[1]
-    if iso_week % 2 == 0:
-        print("  本周为第{}周（偶数周），跳过执行（只在奇数周周二发送）".format(iso_week))
-        print("  下次执行: 下周二")
-        return
-
-    print("  本周为第{}周（奇数周），执行采集".format(iso_week))
+    # iso_week = datetime.now().isocalendar()[1]
+    # if iso_week % 2 == 0:
+    #     print("  本周为第{}周（偶数周），跳过执行（只在奇数周周二发送）".format(iso_week))
+    #     print("  下次执行: 下周二")
+    #     return
+    # print("  本周为第{}周（奇数周），执行采集".format(iso_week))
 
     all_news = []
     all_news.extend(fetch_qbitai())
