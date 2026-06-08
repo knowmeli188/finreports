@@ -182,7 +182,8 @@ def get_ai_summary(all_news):
     print("  生成AI综合解读...")
     cn_news = [n for n in all_news if n.get("source") in ["量子位", "机器之心", "36氪"]]
     global_news = [n for n in all_news if n.get("source") in ["HuggingFace", "GitHub", "arXiv"]]
-    us_news = [n for n in global_news if n.get("source") in ["HuggingFace", "GitHub", "arXiv"]]
+    us_news = [n for n in global_news if n.get("source") in ["HuggingFace", "arXiv"]]
+    eu_news = [n for n in all_news if n.get("source") in ["EU_AI"]]
 
     def format_news_list(news_list, max_count=6):
         text = ""
@@ -192,18 +193,28 @@ def get_ai_summary(all_news):
                 text += "   {}\n".format(n["excerpt"][:80])
         return text
 
-    prompt = """作为AI行业分析师，请基于以下最新行业动态，生成一份中美AI发展动态综合分析报告：
+    prompt = """作为AI行业分析师，请基于以下最新行业动态，生成一份中美欧AI发展动态综合分析报告：
 
 【中国AI动态】
 {cn_news}
 
-【全球AI前沿动态（美国为主）】
-{global_news}
+【美国AI动态】
+{us_news}
 
-【AI开源项目】
-{github}""".format(
+【欧洲AI动态】
+{eu_news}
+
+【全球AI开源项目】
+{github}
+
+请重点分析：
+1. 中国AI在模型发布、产业应用方面的最新进展
+2. 美国AI在基础研究、算力基建方面的领先动态
+3. 欧洲AI在监管立法、隐私保护、开源社区方面的特色发展
+4. 三方对比：中美欧在AI领域的差异化竞争格局""".format(
         cn_news=format_news_list(cn_news),
-        global_news=format_news_list(us_news),
+        us_news=format_news_list(us_news),
+        eu_news=format_news_list(eu_news),
         github=format_news_list([n for n in all_news if n.get("source") == "GitHub"])
     )
 
@@ -225,7 +236,7 @@ def classify_news(all_news):
         "大模型/模型发布": ["模型", "GPT", "Llama", "Claude", "Gemini", "Qwen", "DeepSeek", "ChatGPT", "发布", "开源模型", "参数"],
         "算力/基础设施": ["算力", "GPU", "芯片", "数据中心", "H100", "A100", "训练", "集群", "算力基建", "服务器"],
         "算法/研究": ["算法", "论文", "训练方法", "注意力", "Transformer", "优化", "推理", "对齐", "微调"],
-        "政策/产业": ["政策", "监管", "法案", "投资", "融资", "合作", "竞争", "出口管制", "制裁"],
+        "政策/产业": ["政策", "监管", "法案", "投资", "融资", "合作", "竞争", "出口管制", "制裁", "GDPR", "AI法案", "欧盟", "欧洲"],
     }
     for n in all_news:
         title = n.get("title", "")
@@ -256,7 +267,7 @@ def generate_html_report(all_news, topics, ai_summary):
 <head><meta charset="utf-8"></head>
 <body style="font-family: 'Microsoft YaHei', Arial, sans-serif; max-width: 960px; margin: auto; padding: 20px; background: #f0f4f8;">
 <div style="background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%); color: white; padding: 25px; border-radius: 8px 8px 0 0; text-align: center;">
-    <h1 style="margin:0;">\U0001f916 中美AI行业动态跟踪报告</h1>
+    <h1 style="margin:0;">\U0001f916 中美欧AI行业动态跟踪报告</h1>
     <div style="margin-top:8px; opacity:0.9; font-size:14px;">第{week}周 | {period_start} ~ {period_end}</div>
     <div style="margin-top:4px; opacity:0.7; font-size:12px;">大模型 · 算法 · 算力基建 · 开源 · 产业政策</div>
 </div>
@@ -322,10 +333,11 @@ def generate_html_report(all_news, topics, ai_summary):
                 html += '<div style="font-size:12px; color:#666; margin-top:3px;">{}</div>'.format(excerpt_clean)
             html += '</div>'
 
-    # 中美对比分析
+    # 中美欧对比分析
     cn_count = len([n for n in all_news if n.get("source") in ["量子位", "机器之心", "36氪"]])
     us_count = len([n for n in all_news if n.get("source") in ["HuggingFace", "arXiv", "GitHub"]])
-    html += '<br><h2 style="color:#0d47a1; border-bottom:2px solid #0d47a1; padding-bottom:6px;">\U0001f30d 三、中美动态对比</h2>'
+    eu_count = len([n for n in all_news if n.get("source") == "EU_AI"])
+    html += '<br><h2 style="color:#0d47a1; border-bottom:2px solid #0d47a1; padding-bottom:6px;">\U0001f30d 三、中美欧动态对比</h2>'
     html += '<div style="padding:15px; background:#f5f5f5; border-radius:4px; font-size:13px;">'
     html += '<div style="display:flex; justify-content:space-around; text-align:center;">'
     html += '<div style="flex:1; padding:15px; margin:5px; background:#e8eaf6; border-radius:8px;">'
@@ -337,6 +349,11 @@ def generate_html_report(all_news, topics, ai_summary):
     html += '<div style="font-size:36px; color:#1565c0;">\U0001f1fa\U0001f1f8</div>'
     html += '<div style="font-size:24px; font-weight:bold; color:#01579b;">{}条</div>'.format(us_count)
     html += '<div style="font-size:12px; color:#666;">美国动态（论文/开源）</div>'
+    html += '</div>'
+    html += '<div style="flex:1; padding:15px; margin:5px; background:#fff3e0; border-radius:8px;">'
+    html += '<div style="font-size:36px; color:#e65100;">\U0001f1ea\U0001f1fa</div>'
+    html += '<div style="font-size:24px; font-weight:bold; color:#bf360c;">{}条</div>'.format(eu_count)
+    html += '<div style="font-size:12px; color:#666;">欧洲动态（监管/开源）</div>'
     html += '</div>'
     html += '</div></div><br>'
 
@@ -368,7 +385,7 @@ def send_report(html_body):
     msg = MIMEMultipart("alternative")
     msg["From"] = SENDER_EMAIL
     msg["To"] = RECEIVER_EMAIL
-    msg["Subject"] = "中美AI行业动态跟踪报告 - {}".format(datetime.now().strftime("%Y-%m-%d"))
+    msg["Subject"] = "中美欧AI行业动态跟踪报告 - {}".format(datetime.now().strftime("%Y-%m-%d"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
     try:
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
@@ -385,7 +402,7 @@ def send_report(html_body):
 
 def main():
     print("="*60)
-    print("\U0001f916 中美AI行业动态跟踪系统 v1.0")
+    print("\U0001f916 中美欧AI行业动态跟踪系统 v1.0")
     print("="*60)
     print("报告周期: {}".format(datetime.now().strftime("%Y-%m-%d")))
     print("="*60)
