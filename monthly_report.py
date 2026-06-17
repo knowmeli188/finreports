@@ -11,7 +11,7 @@ import os
 
 SENDER_EMAIL = "1294265055@qq.com"
 SENDER_PASSWORD = "lkfvfbjiitudjbcb"
-RECEIVER_EMAIL = "3444036238@qq.com"
+RECEIVER_EMAIL = "1294265055@qq.com"
 RECEIVER_EMAIL_2 = "knowmeli@vip.sina.com"
 
 SMTP_SERVER = "smtp.qq.com"
