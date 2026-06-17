@@ -57,6 +57,16 @@ def match_keyword(text):
             return True
     return False
 
+BROAD_FINANCE_KEYWORDS = ["股市", "金融", "经济", "改革", "开放", "投资",
+                          "证券", "银行", "贷款", "利率", "汇率", "储备",
+                          "风险", "监管", "稳定", "增长", "发展"]
+
+def is_finance_related(text):
+    for kw in BROAD_FINANCE_KEYWORDS:
+        if kw in text:
+            return True
+    return False
+
 # ============================================================
 # 数据采集模块
 # ============================================================
@@ -75,11 +85,12 @@ def fetch_sina_finance():
                 intro = clean_html(item.get("intro", ""))
                 ctime = item.get("ctime", "")
                 keywords = item.get("keywords", "")
-                if match_leader(title) or match_keyword(title + intro):
+                matched = match_leader(title) or match_keyword(title + intro)
+                if matched or is_finance_related(title + intro):
                     news.append({
                         "title": title, "link": link, "excerpt": intro,
                         "date": ctime, "source": "新浪财经",
-                        "leader": match_leader(title)
+                        "leader": match_leader(title) if matched else None
                     })
     except Exception as e:
         print("    \u274c {}".format(str(e)[:50]))
@@ -100,11 +111,12 @@ def fetch_people_rss():
                 link = item.findtext("link", "")
                 desc = clean_html(item.findtext("description", ""))
                 date = item.findtext("pubDate", "")[:16]
-                if match_leader(title + desc) or match_keyword(title + desc):
+                matched = match_leader(title + desc) or match_keyword(title + desc)
+                if matched or is_finance_related(title + desc):
                     news.append({
                         "title": title, "link": link, "excerpt": desc,
                         "date": date, "source": "人民网",
-                        "leader": match_leader(title + desc)
+                        "leader": match_leader(title + desc) if matched else None
                     })
     except Exception as e:
         print("    \u274c {}".format(str(e)[:50]))
@@ -123,11 +135,12 @@ def fetch_eastmoney():
             html = r.text
             items = re.findall(r'<a[^>]*href="([^"]+)"[^>]*title="([^"]*)"', html)[:20]
             for link, title in items:
-                if match_leader(title) or match_keyword(title):
+                matched = match_leader(title) or match_keyword(title)
+                if matched or is_finance_related(title):
                     news.append({
                         "title": title, "link": link if link.startswith("http") else "https:" + link,
                         "excerpt": "", "date": "", "source": "东方财富",
-                        "leader": match_leader(title)
+                        "leader": match_leader(title) if matched else None
                     })
     except Exception as e:
         print("    \u274c {}".format(str(e)[:50]))
@@ -146,12 +159,13 @@ def fetch_csrc():
                 title = clean_html(title)
                 if not title or len(title) < 5:
                     continue
-                if match_leader(title) or match_keyword(title):
+                matched = match_leader(title) or match_keyword(title)
+                if matched or is_finance_related(title):
                     full_link = link if link.startswith("http") else "http://www.csrc.gov.cn" + link
                     news.append({
                         "title": "[证监会] " + title, "link": full_link,
                         "excerpt": "", "date": "", "source": "证监会",
-                        "leader": match_leader(title)
+                        "leader": match_leader(title) if matched else None
                     })
     except Exception as e:
         print("    \u274c {}".format(str(e)[:50]))
@@ -172,7 +186,8 @@ def fetch_pbc():
                 title = clean_html(title)
                 if not title or len(title) < 5:
                     continue
-                if match_keyword(title) or "央行" in title or "潘功胜" in title:
+                matched = match_keyword(title) or "央行" in title or "潘功胜" in title
+                if matched or is_finance_related(title):
                     full_link = link if link.startswith("http") else "http://www.pbc.gov.cn" + link
                     news.append({
                         "title": "[央行] " + title, "link": full_link,
@@ -197,12 +212,13 @@ def fetch_ndrc():
                 title = clean_html(title)
                 if not title or len(title) < 5:
                     continue
-                if match_leader(title) or match_keyword(title):
+                matched = match_leader(title) or match_keyword(title)
+                if matched or is_finance_related(title):
                     full_link = link if link.startswith("http") else "http://www.ndrc.gov.cn" + link
                     news.append({
                         "title": "[发改委] " + title, "link": full_link,
                         "excerpt": "", "date": "", "source": "发改委",
-                        "leader": match_leader(title)
+                        "leader": match_leader(title) if matched else None
                     })
     except Exception as e:
         print("    \u274c {}".format(str(e)[:50]))
