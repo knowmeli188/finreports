@@ -28,9 +28,11 @@ KEYWORDS = ["资本市场", "证券市场", "货币政策", "财政政策", "降
 # ============================================================
 # 工具函数
 # ============================================================
-def safe_request(url, headers=None, timeout=15):
+def safe_request(url, headers=None, timeout=15, encoding=None):
     try:
         r = requests.get(url, headers=headers, timeout=timeout)
+        if encoding:
+            r.encoding = encoding
         return r
     except Exception as e:
         print("  \u274c 请求失败: {}".format(str(e)[:60]))
@@ -90,7 +92,7 @@ def fetch_people_rss():
     try:
         r = safe_request("http://www.people.com.cn/rss/politics.xml")
         if r:
-            root = ET.fromstring(r.content)
+            root = ET.fromstring(r.content.encode('utf-8'))
             ns = {"": "http://www.w3.org/2005/Atom"}
             items = root.findall(".//item") or root.findall(".//entry", ns)
             for item in items[:20]:
@@ -136,9 +138,8 @@ def fetch_csrc():
     print("  [4/6] 证监会官网...")
     news = []
     try:
-        r = safe_request("http://www.csrc.gov.cn/csrc/", headers={"User-Agent": "Mozilla/5.0"})
+        r = safe_request("http://www.csrc.gov.cn/csrc/", headers={"User-Agent": "Mozilla/5.0"}, encoding="utf-8")
         if r:
-            r.encoding = "utf-8"
             html = r.text
             items = re.findall(r'<a[^>]*href="([^"]+)"[^>]*>([^<]+)</a>', html)[:15]
             for link, title in items:
