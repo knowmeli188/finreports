@@ -72,28 +72,32 @@ def is_finance_related(text):
 # ============================================================
 
 def fetch_sina_finance():
-    """新浪财经新闻API（推荐首选）"""
+    """新浪财经新闻API"""
     print("  [1/6] 新浪财经新闻...")
     news = []
-    try:
-        r = safe_request("https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2509&k=&page=1")
+    urls_tried = [
+        "http://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2509&k=&page=1",
+        "https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2509&k=&page=1"
+    ]
+    for url in urls_tried:
+        r = safe_request(url)
         if r:
-            data = r.json()
-            for item in data.get("result", {}).get("data", [])[:30]:
-                title = item.get("title", "")
-                link = item.get("url", "")
-                intro = clean_html(item.get("intro", ""))
-                ctime = item.get("ctime", "")
-                keywords = item.get("keywords", "")
-                matched = match_leader(title) or match_keyword(title + intro)
-                if matched or is_finance_related(title + intro):
+            try:
+                data = r.json()
+                for item in data.get("result", {}).get("data", [])[:50]:
+                    title = item.get("title", "")
+                    link = item.get("url", "")
+                    intro = clean_html(item.get("intro", ""))
+                    ctime = item.get("ctime", "")
                     news.append({
                         "title": title, "link": link, "excerpt": intro,
                         "date": ctime, "source": "新浪财经",
-                        "leader": match_leader(title) if matched else None
+                        "leader": match_leader(title)
                     })
-    except Exception as e:
-        print("    \u274c {}".format(str(e)[:50]))
+                break
+            except:
+                continue
+    print("    \u2705 获取 {} 条".format(len(news)))
     return news
 
 def fetch_people_rss():
@@ -104,22 +108,20 @@ def fetch_people_rss():
         r = safe_request("http://www.people.com.cn/rss/politics.xml")
         if r:
             root = ET.fromstring(r.content.encode('utf-8'))
-            ns = {"": "http://www.w3.org/2005/Atom"}
-            items = root.findall(".//item") or root.findall(".//entry", ns)
-            for item in items[:20]:
+            items = root.findall(".//item")
+            for item in items[:30]:
                 title = item.findtext("title", "")
                 link = item.findtext("link", "")
                 desc = clean_html(item.findtext("description", ""))
                 date = item.findtext("pubDate", "")[:16]
-                matched = match_leader(title + desc) or match_keyword(title + desc)
-                if matched or is_finance_related(title + desc):
-                    news.append({
-                        "title": title, "link": link, "excerpt": desc,
-                        "date": date, "source": "人民网",
-                        "leader": match_leader(title + desc) if matched else None
-                    })
+                news.append({
+                    "title": title, "link": link, "excerpt": desc,
+                    "date": date, "source": "人民网",
+                    "leader": match_leader(title + desc)
+                })
     except Exception as e:
         print("    \u274c {}".format(str(e)[:50]))
+    print("    \u2705 获取 {} 条".format(len(news)))
     return news
 
 def fetch_eastmoney():
@@ -127,75 +129,79 @@ def fetch_eastmoney():
     print("  [3/6] 东方财富...")
     news = []
     try:
-        r = safe_request("https://finance.eastmoney.com/a/czqyw.html", headers={
-            "User-Agent": "Mozilla/5.0"
-        })
+        r = safe_request("https://finance.eastmoney.com/a/czqyw.html", headers={"User-Agent": "Mozilla/5.0"})
         if r:
             r.encoding = "utf-8"
             html = r.text
-            items = re.findall(r'<a[^>]*href="([^"]+)"[^>]*title="([^"]*)"', html)[:20]
+            items = re.findall(r'<a[^>]*href="([^"]+)"[^>]*title="([^"]*)"', html)[:30]
             for link, title in items:
-                matched = match_leader(title) or match_keyword(title)
-                if matched or is_finance_related(title):
-                    news.append({
-                        "title": title, "link": link if link.startswith("http") else "https:" + link,
-                        "excerpt": "", "date": "", "source": "东方财富",
-                        "leader": match_leader(title) if matched else None
-                    })
+                news.append({
+                    "title": title, "link": link if link.startswith("http") else "https:" + link,
+                    "excerpt": "", "date": "", "source": "东方财富", "leader": match_leader(title)
+                })
     except Exception as e:
         print("    \u274c {}".format(str(e)[:50]))
+    print("    \u2705 获取 {} 条".format(len(news)))
     return news
 
 def fetch_csrc():
     """证监会官网 - 要闻"""
     print("  [4/6] 证监会官网...")
     news = []
-    try:
-        r = safe_request("http://www.csrc.gov.cn/csrc/", headers={"User-Agent": "Mozilla/5.0"}, encoding="utf-8")
-        if r:
-            html = r.text
-            items = re.findall(r'<a[^>]*href="([^"]+)"[^>]*>([^<]+)</a>', html)[:15]
-            for link, title in items:
-                title = clean_html(title)
-                if not title or len(title) < 5:
-                    continue
-                matched = match_leader(title) or match_keyword(title)
-                if matched or is_finance_related(title):
-                    full_link = link if link.startswith("http") else "http://www.csrc.gov.cn" + link
+    urls = ["http://www.csrc.gov.cn/csrc/", "http://www.csrc.gov.cn/pub/newsite/"]
+    for base_url in urls:
+        try:
+            r = safe_request(base_url, headers={"User-Agent": "Mozilla/5.0"}, encoding="utf-8")
+            if r:
+                html = r.text
+                items = re.findall(r'<a[^>]*href="([^"]+)"[^>]*>([^<]+)</a>', html)[:20]
+                for link, title in items:
+                    title = clean_html(title)
+                    if not title or len(title) < 5:
+                        continue
+                    full_link = link if link.startswith("http") else base_url.rstrip("/") + ("/" if not link.startswith("/") else "") + link
                     news.append({
                         "title": "[证监会] " + title, "link": full_link,
                         "excerpt": "", "date": "", "source": "证监会",
-                        "leader": match_leader(title) if matched else None
+                        "leader": match_leader(title)
                     })
-    except Exception as e:
-        print("    \u274c {}".format(str(e)[:50]))
+                if news:
+                    break
+        except:
+            continue
+    print("    \u2705 获取 {} 条".format(len(news)))
     return news
 
 def fetch_pbc():
-    """央行官网 - 货币政策"""
+    """央行官网"""
     print("  [5/6] 央行官网...")
     news = []
-    try:
-        r = safe_request("http://www.pbc.gov.cn/zhengcehuobisi/125207/125213/125431/index.html",
-                         headers={"User-Agent": "Mozilla/5.0"})
-        if r:
-            r.encoding = "utf-8"
-            html = r.text
-            items = re.findall(r'<a[^>]*href="([^"]+)"[^>]*>([^<]+)</a>', html)[:10]
-            for link, title in items:
-                title = clean_html(title)
-                if not title or len(title) < 5:
-                    continue
-                matched = match_keyword(title) or "央行" in title or "潘功胜" in title
-                if matched or is_finance_related(title):
+    urls = [
+        "http://www.pbc.gov.cn/zhengcehuobisi/125207/125213/125431/index.html",
+        "http://www.pbc.gov.cn/goutongjiaoliu/113456/113469/index.html"
+    ]
+    for url in urls:
+        try:
+            r = safe_request(url, headers={"User-Agent": "Mozilla/5.0"})
+            if r:
+                r.encoding = "utf-8"
+                html = r.text
+                items = re.findall(r'<a[^>]*href="([^"]+)"[^>]*>([^<]+)</a>', html)[:15]
+                for link, title in items:
+                    title = clean_html(title)
+                    if not title or len(title) < 5:
+                        continue
                     full_link = link if link.startswith("http") else "http://www.pbc.gov.cn" + link
                     news.append({
                         "title": "[央行] " + title, "link": full_link,
                         "excerpt": "", "date": "", "source": "央行",
                         "leader": "潘功胜" if "潘功胜" in title else None
                     })
-    except Exception as e:
-        print("    \u274c {}".format(str(e)[:50]))
+            if news:
+                break
+        except:
+            continue
+    print("    \u2705 获取 {} 条".format(len(news)))
     return news
 
 def fetch_ndrc():
@@ -203,7 +209,7 @@ def fetch_ndrc():
     print("  [6/6] 发改委官网...")
     news = []
     try:
-        r = safe_request("http://www.ndrc.gov.cn/", headers={"User-Agent": "Mozilla/5.0"})
+        r = safe_request("http://www.ndrc.gov.cn/xwdt/", headers={"User-Agent": "Mozilla/5.0"})
         if r:
             r.encoding = "utf-8"
             html = r.text
@@ -212,16 +218,15 @@ def fetch_ndrc():
                 title = clean_html(title)
                 if not title or len(title) < 5:
                     continue
-                matched = match_leader(title) or match_keyword(title)
-                if matched or is_finance_related(title):
-                    full_link = link if link.startswith("http") else "http://www.ndrc.gov.cn" + link
-                    news.append({
-                        "title": "[发改委] " + title, "link": full_link,
-                        "excerpt": "", "date": "", "source": "发改委",
-                        "leader": match_leader(title) if matched else None
-                    })
+                full_link = link if link.startswith("http") else "http://www.ndrc.gov.cn" + link
+                news.append({
+                    "title": "[发改委] " + title, "link": full_link,
+                    "excerpt": "", "date": "", "source": "发改委",
+                    "leader": match_leader(title)
+                })
     except Exception as e:
         print("    \u274c {}".format(str(e)[:50]))
+    print("    \u2705 获取 {} 条".format(len(news)))
     return news
 
 # ============================================================
